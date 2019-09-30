@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 )
 
 // ErrLockedRedeem is an error
-var ErrLockedRedeem = errors.New("Voucher Redeemtion is Locked by another user")
+var ErrLockedRedeem = errors.New("Voucher Redemtion is Locked by another user")
 
 // Result is a struct
 type Result struct {
@@ -32,15 +31,15 @@ type Voucher struct {
 }
 
 func redeemVoucher(sw *semaphore.Weighted, userID string) (*Voucher, error) {
-	// if ok := sw.TryAcquire(1); !ok {
-	// 	return nil, ErrLockedRedeem
-	// }
-
-	err := sw.Acquire(context.Background(), 1)
-
-	if err != nil {
-		return nil, err
+	if ok := sw.TryAcquire(1); !ok {
+		return nil, ErrLockedRedeem
 	}
+
+	// err := sw.Acquire(context.Background(), 1)
+
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	time.Sleep(time.Second * 5)
 
@@ -61,6 +60,12 @@ func main() {
 	SemWeighted := semaphore.NewWeighted(2)
 
 	http.HandleFunc("/semaphore/voucher/redeem", func(w http.ResponseWriter, r *http.Request) {
+
+		// In this case, the voucher could be redeemed by less then equals 2 users (thread) at the same time.
+		// Voucher redemtion determined as an expensive task. It needs 3 seconds until the task is finished.
+		// When 3 or more users (threads) are accessing the function "redeemVoucher()" at the same time, only 2 users (threads) that are allowed to acquire the task until it is finished,
+		// and the others will be blocked then retrieved an error "ErrLockedRedeem"
+
 		if r.Method != "PUT" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			w.Write([]byte("Method is not allowed"))
