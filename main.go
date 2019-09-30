@@ -75,7 +75,9 @@ func main() {
 		userID := uuid.New().String()
 
 		go func() {
-			voucher, err := redeemVoucher(SemWeighted, userID)
+
+			voucher, err := redeemVoucher(SemWeighted, userID) // The semaphore will be running in this function
+
 			if err != nil {
 				result <- &Result{
 					Success: false,
